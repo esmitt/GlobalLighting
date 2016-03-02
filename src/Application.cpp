@@ -1,4 +1,6 @@
 #include "Application.h"
+#include <imgui.h>
+#include "imgui_impl_glfw_gl3.h"
 #ifdef _WIN32
 	#include <imdebug/imdebug.h>
 	#include <imdebug/imdebuggl.h>
@@ -154,6 +156,8 @@ bool CApplication::initialize()
 	
 	glewExperimental = GL_TRUE;
 	if(glewInit() != GLEW_OK) return false;
+	// Setup ImGui binding
+	ImGui_ImplGlfwGL3_Init(m_glfwWindow, true);
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -243,6 +247,7 @@ void CApplication::destroy()
 {
 	//delete m_Model;
 	glfwDestroyWindow(m_glfwWindow);
+	ImGui_ImplGlfwGL3_Shutdown();
 	glfwTerminate();
 }
 
@@ -416,13 +421,32 @@ void CApplication::draw()
 	//secondPhase();
 	//debugCubeMap(0);
 
-	glfwSwapBuffers(m_glfwWindow);
+	
 }
 
 /// Function to be executed on each iteration
 void CApplication::run()
 {
 	draw();
+	ImGui_ImplGlfwGL3_NewFrame();
+
+	// 1. Show a simple window
+	// Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
+	{
+		bool show_test_window = true;
+		bool show_another_window = false;
+		ImVec4 clear_color = ImColor(114, 144, 154);
+		static float f = 0.0f;
+		ImGui::Text("Hello, world!");
+		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+		ImGui::ColorEdit3("clear color", (float*)&clear_color);
+		if (ImGui::Button("Test Window")) show_test_window ^= 1;
+		if (ImGui::Button("Another Window")) show_another_window ^= 1;
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::Render();
+	}
+	
+	glfwSwapBuffers(m_glfwWindow);
 	glfwPollEvents();	//or glfwWaitEvents()
 }
 

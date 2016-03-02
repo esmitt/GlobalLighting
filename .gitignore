@@ -1,0 +1,6 @@
+Debug/
+include/assimp/
+include/glm/
+assets/
+*.opensdf
+*.sdf
