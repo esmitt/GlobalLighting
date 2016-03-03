@@ -4,3 +4,6 @@ include/glm/
 assets/
 *.opensdf
 *.sdf
+Release/
+include/
+*.ini
