@@ -8,8 +8,6 @@ layout(location = 0) out vec4 vFragColor;
 
 void main(void)
 {
-	//vFragColor = vVertexColor;
-	//vFragColor = texture(sTexture, vVertexUV);
+	//if bHasTexture == 0 then vVertexColor else texture(sTexture, vVertexUV)
 	vFragColor = mix(vVertexColor, texture(sTexture, vVertexUV), bHasTexture);
-	//vFragColor.a = .5 - vVertexUV.x;
 }

@@ -1,13 +1,10 @@
 #ifndef __APPLICATION_H__
 #define __APPLICATION_H__
 
-#ifdef _WIN32
-	#include <GL/glew.h>
-	#include "GLFW/glfw3.h"
-#else
-	#include <GL/glew.h>
-	#include <GLFW/glfw3.h>
-#endif
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#include <string>
+#include <iostream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -15,8 +12,7 @@
 #include "loader/3DModel.h"
 #include "Camera.h"
 #include "FullScreenQuad.h"
-#include <string>
-#include <iostream>
+
 
 using namespace std;
 #ifdef _WIN32
@@ -30,6 +26,7 @@ using namespace std;
 class CApplication
 {
 public:
+	//static const int HAS_TEXTURE = 1;
 	CApplication();
 	~CApplication();
 	void setDimensions(int iWidth, int iHeight);

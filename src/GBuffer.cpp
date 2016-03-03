@@ -1,17 +1,15 @@
-#ifdef _WIN32
-	#include <GL/glew.h>	//this line is mandatory at first place!
-	#include <imdebug/imdebuggl.h>
-#else 
-	#include <GL/glew.h>	//this line is mandatory at first place!
-#endif
-#include "GBuffer.h"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
+#include <GL/glew.h>	//this line is mandatory at first place!
+#include <imdebug/imdebuggl.h>
 #include <stdlib.h>
 #include <iostream>
 #include <limits.h>
+#include "GBuffer.h"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
-#pragma comment(lib, "imdebug.lib")
+#ifdef _WIN32
+	#pragma comment(lib, "imdebug.lib")
+#endif
 
 //#define GL_CHECK_ERRORS2 assert(glGetError()== GL_NO_ERROR);
 #define printOpenGLError2() printOglError2(__FILE__, __LINE__)
@@ -36,9 +34,10 @@ int printOglError2(char *file, int line)
 CGBuffer::CGBuffer(void)
 {
 	m_puCubeTexId = NULL;
-	m_uFBOname = std::numeric_limits<unsigned int>::max();
-	m_uFBODepthName = std::numeric_limits<unsigned int>::max();
+	m_uFBOname = 0;
+	m_uFBODepthName = 0;
 	m_iNTextures = m_iNLayers = 0;
+	m_puCubeTexId = NULL;
 }
 
 ///
@@ -46,9 +45,9 @@ CGBuffer::CGBuffer(void)
 ///
 CGBuffer::~CGBuffer(void)
 {
-	if(m_uFBOname != std::numeric_limits<unsigned int>::max())
+	if(m_uFBOname > 0)
 		glDeleteFramebuffers(1, &m_uFBOname);
-	if(m_uFBODepthName != std::numeric_limits<unsigned int>::max())
+	if(m_uFBODepthName > 0)
 		glDeleteFramebuffers(1, &m_uFBODepthName);
 	if(m_puCubeTexId)
 		glDeleteTextures(m_iNTextures, m_puCubeTexId);
@@ -61,62 +60,53 @@ CGBuffer::~CGBuffer(void)
 ///
 bool CGBuffer::setNumberOfLayer(int k, int width, int height)
 {
-	std::cout << "k =" << k << std::endl;
-	if((k<<1) > 8) return false;	//this value must be checked according the videocard specifications
-	if(m_puCubeTexId)
+	std::cout << "number of layers =" << k << std::endl;
+	if((k<<1) > MAX_NUMBER_OF_TEXTURES) return false;	//this value must be checked according the videocard specifications
+	if(m_puCubeTexId)	//if exists
 		delete [] m_puCubeTexId;
 	m_iNLayers = k;
-	m_iNTextures = k<<1;
+	m_iNTextures = k<<1;	//each texture x 2
 	m_iWidth = width;
 	m_iHeight = height;
 	m_puCubeTexId = new unsigned int[m_iNTextures];
+
+	std::cout << "gbuffer with " << k << " layers" << std::endl;
 	glGenTextures(m_iNTextures, m_puCubeTexId);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
 	for(int l = 0; l < m_iNTextures; l++)
 	{
 		glBindTexture(GL_TEXTURE_CUBE_MAP, m_puCubeTexId[l]);
-		/*glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_REPEAT);*/
-		//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP);
-		//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BASE_LEVEL, 0);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 0);
 		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP);
-		//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP);
 
 		for (k= 0; k < 6; k++)				//six faces of the cubemap
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + k, 0, GL_RGBA32F,
 			m_iWidth, m_iHeight, 0, GL_RGBA, GL_FLOAT, NULL);
 	}
-	//printOpenGLError4();
+	printOpenGLError2();
+
 	//depth buffer
 	glGenRenderbuffers(1, &m_uFBODepthName);
 	glBindRenderbuffer(GL_RENDERBUFFER, m_uFBODepthName);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, m_iWidth, m_iHeight);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
-	//printOpenGLError4();
-		//create the FB and the cubemaps textures
+	printOpenGLError2();
+
+	//create the FB and the cubemaps textures
 	glGenFramebuffers(1, &m_uFBOname);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_uFBOname);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_uFBODepthName);
-	//printOpenGLError4();
+	
 	GLenum draws [2] ={GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};		//two textures by layer
 	glDrawBuffers(2, draws);
-	//printOpenGLError4();
+	printOpenGLError2();
+	
 	//initialize at least layer-0 and layer-1
 	//for (int k = 0; k < 6; k++)	//six faces of the cubemap
 	//{
@@ -131,13 +121,12 @@ bool CGBuffer::setNumberOfLayer(int k, int width, int height)
 	//glBindTexture(GL_TEXTURE_CUBE_MAP, m_puCubeTexId[0]);
 	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, m_puCubeTexId[0], 0);
 
-	GLenum fbok = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-  if(fbok != GL_FRAMEBUFFER_COMPLETE) return false;
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) return false;
 	//printOpenGLError4();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	//printOpenGLError4();
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-	//printOpenGLError4();
+	printOpenGLError2();
 	std::cout << "FBOs made correctly" << std::endl;
 	return true;
 }
@@ -193,7 +182,7 @@ void CGBuffer::bindLayer()
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, m_uFBOname);	//or GL_DRAW_FRAMEBUFFER
 	//glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_uFBODepthName);
-	glPushAttrib(GL_VIEWPORT_BIT | GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
+	//glPushAttrib(GL_VIEWPORT_BIT | GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, m_iWidth, m_iHeight);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearColor(0,0,0,0);
@@ -210,7 +199,7 @@ void CGBuffer::bindLayer()
 ///
 void CGBuffer::unbindLayer(int w, int h)
 {
-	glPopAttrib();
+	//glPopAttrib();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, w, h);
 }
@@ -263,86 +252,6 @@ std::vector<glm::mat4x4> CGBuffer::getViewProjMatrices(const glm::vec3 & vCenter
 #define GL_TEXTURE_CUBE_MAP_POSITIVE_Z 0x8519
 #define GL_TEXTURE_CUBE_MAP_NEGATIVE_Z 0x851A
 */
-
-///
-/// @param vRegularObj An array where normal objects are stored (part of scene)
-/// @param vSpecialObj An array where objects which special effect will be applied
-/// @param mModelViewMatrix The model view matrix of transformation
-/// @param vCenter The center position of camera to lookat
-/// @param vAtPosition The at position of camera to lookat
-/// @param vUpCenter The up vector of camera to lookat
-///
-void CGBuffer::createBuffers(std::vector<C3DModel> & vRegularObj, std::vector<C3DModel> & vSpecialObj, const glm::mat4x4 & mModelViewMatrix, const glm::vec3 & vCenter, const glm::vec3 & vAtPosition, const glm::vec3 & vUpCenter)
-{
-	//GLuint idProgram = m_program.getId();
-	//glm::mat4x4 mLookAt = glm::lookAt(vCenter, vAtPosition, vUpCenter);
-	//std::vector<glm::mat4x4> m_vViewMatrices = getViewProjMatrices(vCenter, vAtPosition, vUpCenter);	///< Six matrices to composed the cubemap
-	//glm::mat3x3 m_normalMatrix;
-	//std::vector<int>::size_type it = 0;
-	//for (int iLayer = 1; iLayer <= m_iNLayers; iLayer++)
-	//{
-	//	int l1 = (iLayer << 1) - 2;	//start from 0
-	//	int l2 = l1 + 1;
-	//	
-	//	m_program.enable();
-	//	for(int k = 0; k < 6; k++)
-	//	{
-	//		glActiveTexture(GL_TEXTURE0);
-	//		glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(l1));
-	//		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + k, getCubeMapId(l1), 0);
-
-	//		glActiveTexture(GL_TEXTURE1);
-	//		glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(l2));
-	//		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + k, getCubeMapId(l2), 0);
-
-	//		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	//		if(iLayer > 1)
-	//		{
-	//			glActiveTexture(GL_TEXTURE3);
-	//			glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(((iLayer-1)<<1)-1));
-	//			glProgramUniform1i(idProgram, m_program.getLocation("cubeMapR0"), 3);
-	//		}
-
-	//		glProgramUniform1i(idProgram, m_program.getLocation("firstPass"), (iLayer == 1?true:false));
-	//		glProgramUniform1i(idProgram, m_program.getLocation("bSpecularOject"), 0);
-	//		glProgramUniform1i(idProgram, m_program.getLocation("texSampler"), 7);
-	//		glUniform3fv(m_program.getLocation("fCenterPosition"),1, glm::value_ptr(vCenter));
-	//		glUniformMatrix4fv(m_program.getLocation("mView"), 1, GL_FALSE, glm::value_ptr(m_vViewMatrices[k]));
-	//		glUniformMatrix4fv(m_program.getLocation("mLookAt"), 1, GL_FALSE, glm::value_ptr(mLookAt));
-	//		glUniformMatrix4fv(m_program.getLocation("mModelView"), 1, GL_FALSE, glm::value_ptr(mModelViewMatrix));
-	//		glUniformMatrix4fv(m_program.getLocation("mProjection"), 1, GL_FALSE, glm::value_ptr(m_ProjMatrix90Degrees));
-	//		m_normalMatrix = glm::mat3x3(glm::transpose(glm::inverse(mModelViewMatrix)));
-	//		glUniformMatrix3fv(m_program.getLocation("mNormal"), 1, GL_FALSE, glm::value_ptr(m_normalMatrix));
-	//		glEnableVertexAttribArray(m_program.getLocation("vVertex"));
-	//		glEnableVertexAttribArray(m_program.getLocation("vNormal"));
-	//		if(m_program.getLocation("vTexCoord") != -1)	glEnableVertexAttribArray(m_program.getLocation("vTexCoord"));
-	//		if(m_program.getLocation("vColor") != -1)	glEnableVertexAttribArray(m_program.getLocation("vColor"));
-	//		glUniform1i(m_program.getLocation("bHasTexture"), 1);
-	//		glActiveTexture(GL_TEXTURE7);
-	//		for(it = 0; it != vRegularObj.size(); it++)
-	//			vRegularObj[it].draw();
-	//		glUniform1i(m_program.getLocation("bSpecularOject"), 1);
-	//		for(it = 0; it != vSpecialObj.size(); it++) 
-	//			vSpecialObj[it].draw();
-	//		glDisableVertexAttribArray(m_program.getLocation("vVertex"));
-	//		glDisableVertexAttribArray(m_program.getLocation("vNormal"));
-	//		if(m_program.getLocation("vTexCoord") != -1)	glDisableVertexAttribArray(m_program.getLocation("vTexCoord"));
-	//		if(m_program.getLocation("vColor") != -1)	glDisableVertexAttribArray(m_program.getLocation("vColor"));
-	//		glActiveTexture(GL_TEXTURE0);
-	//		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-	//		glActiveTexture(GL_TEXTURE1);
-	//		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-	//		glActiveTexture(GL_TEXTURE3);
-	//		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-	//		glActiveTexture(GL_TEXTURE7);
-	//		glBindTexture(GL_TEXTURE_2D, 0);
-	//	}
-	//	m_program.disable();
-	//}
-}
-
-
 
 ///
 /// @param vRegularObj An array where normal objects are stored (part of scene)

@@ -1,6 +1,6 @@
 #include "Application.h"
-#include <imgui.h>
-#include "imgui_impl_glfw_gl3.h"
+//#include <imgui.h>
+//#include "imgui_impl_glfw_gl3.h"
 #ifdef _WIN32
 	#include <imdebug/imdebug.h>
 	#include <imdebug/imdebuggl.h>
@@ -14,7 +14,7 @@ CApplication::CApplication()
 	m_fFCP = 500.0f;
 	m_iWidth = 512;
 	m_iHeight = 512;
-	m_fAngle = 45.f;
+	m_fAngle = 60.f;
 	m_iNLayer = 1;
 	m_bDebugging = m_bTakeCubemaps = false;
 }
@@ -157,7 +157,7 @@ bool CApplication::initialize()
 	glewExperimental = GL_TRUE;
 	if(glewInit() != GLEW_OK) return false;
 	// Setup ImGui binding
-	ImGui_ImplGlfwGL3_Init(m_glfwWindow, true);
+	//ImGui_ImplGlfwGL3_Init(m_glfwWindow, true);
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -179,7 +179,7 @@ bool CApplication::initialize()
 	//if(m_Model->load("Battlelord_DNF/Battlelord.obj", TypeObject::SPECULAR, glm::vec3(0,0,-2)))
 	//if(m_Model->load("Battlelord_DNF/Battlelord.obj", TypeObject::SPECULAR))
 	//if(model->load("Mario and Luigi/luigi.obj", TypeObject::SPECULAR))
-	//if(model->load("objects/homers/Homer Santa/Homer_Santa.obj", TypeObject::SPECULAR))
+	//if(model->load("assets/homers/Homer Santa/Homer_Santa.obj", TypeObject::SPECULAR))
 	//if(m_Model->load("capsule.obj", TypeObject::SPECULAR))
 	if(model->load("assets/sponza.obj", TypeObject::SPECULAR))
 	//if(model->load("objects/dragon.obj", TypeObject::SPECULAR))
@@ -247,7 +247,7 @@ void CApplication::destroy()
 {
 	//delete m_Model;
 	glfwDestroyWindow(m_glfwWindow);
-	ImGui_ImplGlfwGL3_Shutdown();
+	//ImGui_ImplGlfwGL3_Shutdown();
 	glfwTerminate();
 }
 
@@ -263,7 +263,7 @@ void CApplication::normalRendering()
 	for(std::vector<int>::size_type it = 0; it != m_vRegularObj.size(); it++)
 	{
 		//glUniform1i(m_progBase.getLocation("bHasTexture"),  m_vRegularObj[it].hasTexture());	//0 false, otherwise true
-		glUniform1i(m_progBase.getLocation("bHasTexture"),  1);	//0 false, otherwise true
+		//
 		m_vRegularObj[it].draw();
 	}
 }
@@ -330,86 +330,42 @@ void CApplication::draw()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearColor(0.15f, 0.15f, 0.15f, 1.f);
+	
+	//basic transformations
+	float d = 1.f / m_vRegularObj[0].getDiagonal();
+	mModelMatrix =	glm::scale(glm::mat4(), glm::vec3(d, d, d)) * 
+									glm::translate(glm::mat4(), -m_vRegularObj[0].getCenter());
+	mModelViewMatrix = m_camera.getLookAt() * mModelMatrix;
+	
 
-	mModelViewMatrix = glm::translate(glm::mat4(), -m_vRegularObj[0].getCenter());
-	float d = 1.f/m_vRegularObj[0].getDiagonal();
-	mModelViewMatrix =  glm::scale(glm::mat4(), glm::vec3(d,d,d)) * mModelViewMatrix;
-	mModelMatrix = mModelViewMatrix;
-	//mModelViewMatrix = glm::lookAt(center, at,up) * mModelViewMatrix;
-	//mModelViewMatrix = glm::translate(glm::mat4(), -m_Model->getCenter() - glm::vec3(0,0,5)); 
-	glm::mat4 lookat = m_camera.getLookAt();
-	//////double o = glfwGetTime()*50 ;
-	//////mModelViewMatrix  = glm::rotate(glm::mat4(), float(o) , glm::vec3(0,1,0)) * mModelViewMatrix; 
-	//////mModelViewMatrix = glm::translate(glm::mat4(), glm::vec3(0,0,-.100)) * mModelViewMatrix;
-	
-	mModelViewMatrix = lookat * mModelViewMatrix;
-	
-	//mModelViewMatrix = glm::translate(glm::mat4(), glm::vec3(0,0,-5.f)); 
-	//m_Model->centerOnPoint(glm::vec3(0,0,-2));
 	glActiveTexture(GL_TEXTURE7);
 	m_progBase.enable();
 		glUniformMatrix4fv(m_progBase.getLocation("mModelView"), 1, GL_FALSE, glm::value_ptr(mModelViewMatrix));
-		glUniformMatrix4fv(m_progBase.getLocation("mProjection"), 1, GL_FALSE, glm::value_ptr(mProjMatrix));	
-		glUniform1i(m_progBase.getLocation("sTexture2D"), 7);
+		glUniformMatrix4fv(m_progBase.getLocation("mProjection"), 1, GL_FALSE, glm::value_ptr(mProjMatrix));
+		glUniform1i(m_progBase.getLocation("sTexture"), 7);
+		glUniform1i(m_progBase.getLocation("bHasTexture"), true);	//0 false, otherwise true
+
 		glEnableVertexAttribArray(m_progBase.getLocation("vVertex"));
 		if(m_progBase.getLocation("vNormal") != -1) glEnableVertexAttribArray(m_progBase.getLocation("vNormal"));
 		if(m_progBase.getLocation("vTexCoord") != -1) glEnableVertexAttribArray(m_progBase.getLocation("vTexCoord"));
 		if(m_progBase.getLocation("vColor") != -1) glEnableVertexAttribArray(m_progBase.getLocation("vColor"));
-		glActiveTexture(GL_TEXTURE7);
-		glUniform1i(m_progBase.getLocation("sTexture"), 7);
-		normalRendering();
+			normalRendering();
 		glDisableVertexAttribArray(m_progBase.getLocation("vVertex"));
 		if(m_progBase.getLocation("vNormal") != -1) glDisableVertexAttribArray(m_progBase.getLocation("vNormal"));
 		if(m_progBase.getLocation("vTexCoord") != -1) glDisableVertexAttribArray(m_progBase.getLocation("vTexCoord"));
 		if(m_progBase.getLocation("vColor") != -1) glDisableVertexAttribArray(m_progBase.getLocation("vColor"));
   m_progBase.disable();
-  /*
-  m_progBase.enable();
-			glEnableVertexAttribArray(0);
-			glEnableVertexAttribArray(1);
-			glEnableVertexAttribArray(2);
-			glEnableVertexAttribArray(3);
-			glUniformMatrix4fv(m_progBase.getLocation("mModelView"), 1, GL_FALSE, glm::value_ptr(mModelViewMatrix));
-			glUniformMatrix4fv(m_progBase.getLocation("mProjection"), 1, GL_FALSE, glm::value_ptr(mProjMatrix));
-			glActiveTexture(GL_TEXTURE1);
-			glUniform1i(m_progBase.getLocation("sTexture"), 1);
-			glUniform1i(m_progBase.getLocation("bHasTexture"), model->hasTexture());	//0 false, otherwise true
-			//std::cout << model->hasTexture()<<std::endl;
-			model->draw();
-			glDisableVertexAttribArray(0);
-			glDisableVertexAttribArray(1);
-			glDisableVertexAttribArray(2);
-			glDisableVertexAttribArray(3);
-    m_progBase.disable();
-  */
 
 	if(m_bTakeCubemaps)
 	{
 		//testing the gbuffer
 		m_gbuffer.bindLayer();
-		//m_gbuffer.createBuffers(normalRendering, this->effectRendering, mModelViewMatrix, glm::vec3(0), glm::vec3(0,1,-2), glm::vec3(0,1,0));
-
-		//m_gbuffer.createBuffers(m_vRegularObj, m_vSpecialObj, mModelViewMatrix, a, b, c);
-		m_gbuffer.createBuffers(m_vRegularObj, m_vSpecialObj, m_camera.getCenter(), m_camera.getAtPosition(), m_camera.getUpVector(), mModelMatrix);
-			//m_progBase.enable();
-			//	glUniformMatrix4fv(m_progBase.getLocation("mModelView"), 1, GL_FALSE, glm::value_ptr(mModelViewMatrix));
-			//	glUniformMatrix4fv(m_progBase.getLocation("mProjection"), 1, GL_FALSE, glm::value_ptr(mProjMatrix));	
-			//	glUniform1i(m_progBase.getLocation("sTexture2D"), 7);
-			//	glEnableVertexAttribArray(m_progBase.getLocation("vVertex"));
-			//	if(m_progBase.getLocation("vNormal") != -1) glEnableVertexAttribArray(m_progBase.getLocation("vNormal"));
-			//	if(m_progBase.getLocation("vTexCoord") != -1) glEnableVertexAttribArray(m_progBase.getLocation("vTexCoord"));
-			//	
-			//	//m_Model->draw();
-			//	//m_vRegularObj[0].draw();
-			//	glDisableVertexAttribArray(m_progBase.getLocation("vVertex"));
-			//	if(m_progBase.getLocation("vNormal") != -1) glDisableVertexAttribArray(m_progBase.getLocation("vNormal"));
-			//	if(m_progBase.getLocation("vTexCoord") != -1) glDisableVertexAttribArray(m_progBase.getLocation("vTexCoord"));
-			//m_progBase.disable();
+			m_gbuffer.createBuffers(m_vRegularObj, m_vSpecialObj, m_camera.getCenter(), m_camera.getAtPosition(), 
+															m_camera.getUpVector(), mModelMatrix);
 		m_gbuffer.unbindLayer(m_iWidth, m_iHeight);
-		m_bTakeCubemaps = false;
+		
 		debugCubeMap(m_gbuffer.getCubeMapId(0));
-		//debugCubeMap(m_gbuffer.getCubeMapId(2));
-		//debugCubeMap(m_gbuffer.getCubeMapId(4));
+		m_bTakeCubemaps = false;
 	}
 
 	//float *p = new float[512 * 512 * 4];
@@ -421,29 +377,28 @@ void CApplication::draw()
 	//secondPhase();
 	//debugCubeMap(0);
 
-	
 }
 
 /// Function to be executed on each iteration
 void CApplication::run()
 {
 	draw();
-	ImGui_ImplGlfwGL3_NewFrame();
+	//ImGui_ImplGlfwGL3_NewFrame();
 
 	// 1. Show a simple window
 	// Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
 	{
-		bool show_test_window = true;
-		bool show_another_window = false;
-		ImVec4 clear_color = ImColor(114, 144, 154);
-		static float f = 0.0f;
-		ImGui::Text("Hello, world!");
-		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-		ImGui::ColorEdit3("clear color", (float*)&clear_color);
-		if (ImGui::Button("Test Window")) show_test_window ^= 1;
-		if (ImGui::Button("Another Window")) show_another_window ^= 1;
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		ImGui::Render();
+		//bool show_test_window = true;
+		//bool show_another_window = false;
+		//ImVec4 clear_color = ImColor(114, 144, 154);
+		//static float f = 0.0f;
+		//ImGui::Text("Hello, world!");
+		//ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+		//ImGui::ColorEdit3("clear color", (float*)&clear_color);
+		//if (ImGui::Button("Test Window")) show_test_window ^= 1;
+		//if (ImGui::Button("Another Window")) show_another_window ^= 1;
+		//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		//ImGui::Render();
 	}
 	
 	glfwSwapBuffers(m_glfwWindow);
