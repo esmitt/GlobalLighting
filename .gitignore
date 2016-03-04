@@ -311,3 +311,4 @@ include/imgui/stb_textedit.h
 include/imgui/stb_truetype.h
 ProjectIllu.opensdf
 ProjectIllu.sdf
+ProjectIllu.vcxproj
