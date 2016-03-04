@@ -7,3 +7,4 @@ assets/
 Release/
 include/
 *.ini
+ProjectIllu.vcxproj
