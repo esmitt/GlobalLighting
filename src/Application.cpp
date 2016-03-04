@@ -15,7 +15,7 @@ CApplication::CApplication()
 	m_iWidth = 512;
 	m_iHeight = 512;
 	m_fAngle = 60.f;
-	m_iNLayer = 1;
+	m_iNLayer = 3;
 	m_bDebugging = m_bTakeCubemaps = false;
 }
 
@@ -358,7 +358,6 @@ void CApplication::draw()
 
 	if(m_bTakeCubemaps)
 	{
-		//testing the gbuffer
 		m_gbuffer.bindLayer();
 			m_gbuffer.createBuffers(m_vRegularObj, m_vSpecialObj, m_camera.getCenter(), m_camera.getAtPosition(), 
 															m_camera.getUpVector(), mModelMatrix);

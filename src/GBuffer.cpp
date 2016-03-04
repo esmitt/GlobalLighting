@@ -70,7 +70,7 @@ bool CGBuffer::setNumberOfLayer(int k, int width, int height)
 	m_iHeight = height;
 	m_puCubeTexId = new unsigned int[m_iNTextures];
 
-	std::cout << "gbuffer with " << k << " layers" << std::endl;
+	std::cout << "gbuffer with " << m_iNTextures << " textures" << std::endl;
 	glGenTextures(m_iNTextures, m_puCubeTexId);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
@@ -268,35 +268,37 @@ void CGBuffer::createBuffers(std::vector<C3DModel> & vRegularObj, std::vector<C3
 	std::vector<glm::mat4x4> m_vViewMatrices = getViewProjMatrices(vCenter, vAtPosition, vUpCenter);	///< Six matrices to composed the cubemap
 	glm::mat3x3 m_normalMatrix;
 	std::vector<int>::size_type it = 0;
-	//m_program.showDebugging();
+	
 	m_program.enable();
-	//printOpenGLError2();
-	for (int iLayer = 1; iLayer <= m_iNLayers; iLayer++)
+	for (int iLayer = 0; iLayer < m_iNLayers; iLayer++)
 	{
-		int l1 = (iLayer << 1) - 2;	//start from 0
-		int l2 = l1 + 1;
+		//start from texture 0, 1 for layer 0; texture 1, 2 for layer 1, and so on
+		int tex1 = iLayer << 1;
+		int tex2 = tex1 + 1;
 		for (int k = 0; k < 6; k++)
 		{
+			//1st texture of layer
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(l1));
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + k, getCubeMapId(l1), 0);
-
+			glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(tex1));
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + k, getCubeMapId(tex1), 0);
+			//2nd texture of layer
 			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(l2));
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + k, getCubeMapId(l2), 0);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(tex2));
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + k, getCubeMapId(tex2), 0);
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			//glClearColor(1,1,1,1);
 			glClearColor(0,0,0,1);
-			if(iLayer > 1)
+
+			if(iLayer > 0)	//start from the 2nd layer
 			{
-				glActiveTexture(GL_TEXTURE3);
-				glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(((iLayer-1)<<1)-1));
-				glProgramUniform1i(idProgram, m_program.getLocation("cubeMapR0"), 3);
+				glActiveTexture(GL_TEXTURE2);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(tex1 - 1));
+				//std::cout << "back layer " << (l1 - 1) << std::endl;
+				glProgramUniform1i(idProgram, m_program.getLocation("cubeMapR0"), 2);
 				//std::cout << "layer:" << ((iLayer-1)<<1)-1 << std::endl;
 			}
 			//printOpenGLError2();
-			glProgramUniform1i(idProgram, m_program.getLocation("firstPass"), (iLayer == 1?true:false));
+			glProgramUniform1i(idProgram, m_program.getLocation("firstPass"), (iLayer == 0?true:false));
 			glProgramUniform1i(idProgram, m_program.getLocation("bSpecularOject"), 0);
 			glProgramUniform1i(idProgram, m_program.getLocation("texSampler"), 7);
 			glUniform3fv(m_program.getLocation("fCenterPosition"),1, glm::value_ptr(vCenter));
