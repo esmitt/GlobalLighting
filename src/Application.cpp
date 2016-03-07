@@ -363,7 +363,8 @@ void CApplication::draw()
 															m_camera.getUpVector(), mModelMatrix);
 		m_gbuffer.unbindLayer(m_iWidth, m_iHeight);
 		
-		debugCubeMap(m_gbuffer.getCubeMapId(0));
+		debugCubeMap(m_gbuffer.getCubeMapId(2));
+		debugCubeMap(m_gbuffer.getCubeMapId(3));
 		m_bTakeCubemaps = false;
 	}
 

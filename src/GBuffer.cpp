@@ -155,23 +155,23 @@ void CGBuffer::debugRecompile()
 	m_program.link();
 	m_program.enable();
 		m_program.addAttribute("vVertex");
-		m_program.addAttribute("vTexCoord");
 		m_program.addAttribute("vNormal");
+		m_program.addAttribute("vColor");
+		m_program.addAttribute("vTexCoord");
+
+		m_program.addUniform("mProjection");
 		m_program.addUniform("mModelView");
 		m_program.addUniform("mModel");
-		//m_program.addUniform("mLookAt");
+		m_program.addUniform("mView");
+		m_program.addUniform("mLookAt");
+		m_program.addUniform("fCenterPosition");
+		m_program.addUniform("mNormal");
+
+		m_program.addUniform("firstPass");
+		m_program.addUniform("texSampler");
 		m_program.addUniform("cubeMapR0");
 		m_program.addUniform("bSpecularOject");
-		m_program.addUniform("firstPass");
-		m_program.addUniform("debugcolor");
-		m_program.addUniform("texSampler");
-		m_program.addUniform("iSelection");
-		m_program.addUniform("fCenterPosition");
-		m_program.addUniform("mView");
-		m_program.addUniform("mProjection");
-		m_program.addUniform("mNormal");
 		m_program.addUniform("bHasTexture");
-		//m_program.showDebugging();
 	m_program.disable();
 }
 
@@ -285,44 +285,38 @@ void CGBuffer::createBuffers(std::vector<C3DModel> & vRegularObj, std::vector<C3
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(tex2));
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + k, getCubeMapId(tex2), 0);
-
+			//clean the buffers
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glClearColor(0,0,0,1);
 
+			glUniform1i(m_program.getLocation("firstPass"), (iLayer == 0 ? true : false));
 			if(iLayer > 0)	//start from the 2nd layer
 			{
 				glActiveTexture(GL_TEXTURE2);
-				glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(tex1 - 1));
-				//std::cout << "back layer " << (l1 - 1) << std::endl;
-				glProgramUniform1i(idProgram, m_program.getLocation("cubeMapR0"), 2);
-				//std::cout << "layer:" << ((iLayer-1)<<1)-1 << std::endl;
+				glBindTexture(GL_TEXTURE_CUBE_MAP, getCubeMapId(tex1 - 2));
+				glUniform1i(m_program.getLocation("cubeMapR0"), 2);
 			}
-			//printOpenGLError2();
-			glProgramUniform1i(idProgram, m_program.getLocation("firstPass"), (iLayer == 0?true:false));
-			glProgramUniform1i(idProgram, m_program.getLocation("bSpecularOject"), 0);
-			glProgramUniform1i(idProgram, m_program.getLocation("texSampler"), 7);
+
+			glActiveTexture(GL_TEXTURE3);
+			glUniform1i(m_program.getLocation("bSpecularOject"), 0);
+			glUniform1i(m_program.getLocation("texSampler"), 3);
 			glUniform3fv(m_program.getLocation("fCenterPosition"),1, glm::value_ptr(vCenter));
+			glUniformMatrix4fv(m_program.getLocation("mModel"), 1, GL_FALSE, glm::value_ptr(mModelMatrix));
 			glUniformMatrix4fv(m_program.getLocation("mView"), 1, GL_FALSE, glm::value_ptr(m_vViewMatrices[k]));
 			//glUniformMatrix4fv(m_program.getLocation("mLookAt"), 1, GL_FALSE, glm::value_ptr(mLookAt));
 			//glUniformMatrix4fv(m_program.getLocation("mModelView"), 1, GL_FALSE, glm::value_ptr(mModelViewMatrix));
-			glUniformMatrix4fv(m_program.getLocation("mModel"), 1, GL_FALSE, glm::value_ptr(mModelMatrix));
 			glUniformMatrix4fv(m_program.getLocation("mProjection"), 1, GL_FALSE, glm::value_ptr(m_ProjMatrix90Degrees));
 			glm::mat4x4 mModelViewMatrix = m_vViewMatrices[k] * mModelMatrix;
 			m_normalMatrix = glm::mat3x3(glm::transpose(glm::inverse(mModelViewMatrix)));
 			glUniformMatrix3fv(m_program.getLocation("mNormal"), 1, GL_FALSE, glm::value_ptr(m_normalMatrix));
 			
-			//printOpenGLError2();
 			glEnableVertexAttribArray(m_program.getLocation("vVertex"));
-			//printOpenGLError2();
+			
 			if(m_program.getLocation("vNormal") != -1) glEnableVertexAttribArray(m_program.getLocation("vNormal"));
-			//printOpenGLError2();
 			if(m_program.getLocation("vTexCoord") != -1)	glEnableVertexAttribArray(m_program.getLocation("vTexCoord"));
-			//printOpenGLError2();
 			if(m_program.getLocation("vColor") != -1)	glEnableVertexAttribArray(m_program.getLocation("vColor"));
-			//printOpenGLError2();
-			glActiveTexture(GL_TEXTURE7);
-			glUniform1i(m_program.getLocation("sTexture"), 7);
-			glUniform1i(m_program.getLocation("bHasTexture"), 1);
+			
+			glUniform1i(m_program.getLocation("bHasTexture"), true);
 			for(it = 0; it != vRegularObj.size(); it++)
 				vRegularObj[it].draw();
 			glUniform1i(m_program.getLocation("bSpecularOject"), 1);
@@ -330,6 +324,7 @@ void CGBuffer::createBuffers(std::vector<C3DModel> & vRegularObj, std::vector<C3
 //			for(it = 0; it != vSpecialObj.size(); it++) 
 //				vSpecialObj[it].draw();
 			//printOpenGLError2();
+			
 			glDisableVertexAttribArray(m_program.getLocation("vVertex"));
 			if(m_program.getLocation("vNormal") != -1)	glDisableVertexAttribArray(m_program.getLocation("vNormal"));
 			if(m_program.getLocation("vTexCoord") != -1)	glDisableVertexAttribArray(m_program.getLocation("vTexCoord"));
@@ -339,11 +334,11 @@ void CGBuffer::createBuffers(std::vector<C3DModel> & vRegularObj, std::vector<C3
 			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-			glActiveTexture(GL_TEXTURE3);
+			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-			glActiveTexture(GL_TEXTURE7);
+			glActiveTexture(GL_TEXTURE3);
 			glBindTexture(GL_TEXTURE_2D, 0);
-			//printOpenGLError2();
+			printOpenGLError2();
 		}
 	}
 	m_program.disable();
